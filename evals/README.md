@@ -26,7 +26,7 @@ Tier 2 is a **lexical approximation** of routing (stemmed TF-IDF over descriptio
 ```bash
 # Tier 2 — deterministic, runs in CI
 node scripts/run-evals.js
-node scripts/run-evals.js --min-rank1 80  # enforce the current routing floor
+node scripts/run-evals.js --min-rank1 95  # enforce the current routing floor
 
 # Tier 3 — behavioral, runs each eval through headless claude, then grades it
 node scripts/run-evals.js --behavioral test-driven-development            # spends tokens
@@ -56,15 +56,16 @@ One file per skill: `evals/cases/<skill-name>.json`.
     {
       "id": 1,
       "kind": "execution",
-      "prompt": "Fix the reported rounding bug in the invoice totals, test-first.",
-      "expected_output": "A failing test demonstrating the bug, a minimal fix turning it green, full suite passing",
+      "prompt": "Finance filed the reconciliation bug written up in BUG.md. Fix it.",
+      "expected_output": "A failing reproduction test for the lost-cent case, a fix preserving both README invariants (exact sum, earliest-shares fairness), the fairness invariant covered by its own test, full suite passing",
       "files": [
         "test-driven-development"
       ],
       "expectations": [
-        "A failing test is written and shown failing before the fix",
-        "The implementation is the minimum needed to pass",
-        "The full suite is run after the fix to catch regressions"
+        "A test reproducing the lost-cent case from BUG.md is added and shown failing before src/split.js is modified",
+        "The final implementation satisfies the full README fairness invariant (leftover cents go to the earliest shares): splitCents(10000, 3) returns [3334, 3333, 3333] as BUG.md expects and splitCents(100, 7) returns [15, 15, 14, 14, 14, 14, 14] as the README example shows; dumping the whole remainder on a single share would violate both",
+        "The fairness invariant from the README has its own test case in the suite on an input with remainder of at least 2 (such as splitCents(100, 7)), where dumping the whole remainder on one share would fail it, beyond the reported lost-cent case",
+        "The full suite is run with the repository's own command after the fix"
       ]
     }
   ]
@@ -82,4 +83,4 @@ Every skill ships with an eval file. When you add `skills/<name>/`, add `evals/c
 
 ## Metrics to watch
 
-The Tier-2 run prints a **trigger rank-1 rate** (share of positive prompts that rank their skill first, not merely top-k). CI runs with `--min-rank1 80`, leaving useful headroom below the checked-in 86% baseline so an unrelated description edit does not immediately turn CI red. Raise the floor as routing improves; never lower it to make a regression pass. Falling numbers mean descriptions are drifting toward each other. The collision check errors at ≥75% pairwise description similarity and warns at ≥50%. Known description-vocabulary gaps surfaced by these evals are tracked in [#351](https://github.com/addyosmani/agent-skills/issues/351).
+The Tier-2 run prints a **trigger rank-1 rate** (share of positive prompts that rank their skill first, not merely top-k). CI runs with `--min-rank1 95`, leaving useful headroom below the checked-in 100% baseline so an unrelated description edit does not immediately turn CI red. Raise the floor as routing improves; never lower it to make a regression pass. Falling numbers mean descriptions are drifting toward each other. The collision check errors at ≥75% pairwise description similarity and warns at ≥50%. When these evals surface a description-vocabulary gap (see [#351](https://github.com/addyosmani/agent-skills/issues/351) for the original examples), fix the description, not the prompt.
