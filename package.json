@@ -1,0 +1,7 @@
+{
+  "name": "agent-skills-local-tools",
+  "private": true,
+  "scripts": {
+    "audit:mirror": "bash scripts/check-agent-mirror.sh"
+  }
+}
